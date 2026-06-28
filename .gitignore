@@ -1,0 +1,41 @@
+__pycache__/
+.DS_Store/
+.cache/
+.vscode/
+build/
+
+# ESP32 build
+/partitions.bin
+/partitions.csv
+/sdkconfig.old
+/sdkconfig
+/*/sdkconfig.old
+/*/sdkconfig
+/*.fw
+/*.img
+/*.zip
+/*.bin
+
+# SDL2 build
+/sd
+/stderr.txt
+/stdout.txt
+/gmon.out
+/*.exe
+
+# XiaoMiao custom target artifacts
+_build_xiaomiao.bat
+_flash_xiaomiao.bat
+retro-go_*.bin
+retro-go_*.img
+
+# Downloaded reference repos
+/xueersi-xiaomiao-main/
+/XUEERSI_ESP32_Board-master/
+
+# ESP-IDF build directories
+launcher/build/
+retro-core/build/
+prboom-go/build/
+gwenesis/build/
+fmsx/build/
