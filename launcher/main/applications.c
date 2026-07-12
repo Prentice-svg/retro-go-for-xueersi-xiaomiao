@@ -113,6 +113,20 @@ static void application_init(retro_app_t *app)
     rg_storage_mkdir(app->paths.roms);
 
     rg_storage_scandir(app->paths.roms, scan_folder_cb, app, RG_SCANDIR_RECURSIVE);
+
+    if (app->files_count == 0)
+    {
+        char legacy_path[RG_PATH_MAX];
+        snprintf(legacy_path, RG_PATH_MAX, "%s/%s", RG_STORAGE_ROOT, app->short_name);
+
+        if (strcmp(legacy_path, app->paths.roms) != 0 && rg_storage_exists(legacy_path))
+        {
+            RG_LOGI("No ROMs found in '%s', trying legacy folder '%s'", app->paths.roms, legacy_path);
+            snprintf(app->paths.roms, RG_PATH_MAX, "%s", legacy_path);
+            rg_storage_scandir(app->paths.roms, scan_folder_cb, app, RG_SCANDIR_RECURSIVE);
+        }
+    }
+
     rg_storage_scandir(app->paths.saves, scan_saves_cb, app, RG_SCANDIR_RECURSIVE);
     // rg_storage_scandir(app->paths.covers, scan_folder_cb3, app, RG_SCANDIR_RECURSIVE);
 

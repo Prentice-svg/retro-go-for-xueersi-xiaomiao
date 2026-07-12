@@ -235,7 +235,11 @@ bool rg_gui_set_font(int index)
 
     gui.font = fonts[index];
     gui.font_index = index;
-    gui.font_height = (index < 3) ? (8 + index * 4) : gui.font->height;
+    // The indexed ZenHei source glyphs are 16px high, but 12px is the
+    // readable launcher size on the 320x240 panel. ASCII falls back to the
+    // built-in font and is scaled to the same line height.
+    gui.font_height = (index == RG_FONT_ZENHEI_CN || index == RG_FONT_FUSIONPIXEL_12) ? 12 :
+                      ((index < 3) ? (8 + index * 4) : gui.font->height);
 
     rg_settings_set_number(NS_GLOBAL, SETTING_FONTTYPE, index);
 
@@ -309,13 +313,23 @@ static size_t get_glyph(uint32_t *output, const rg_font_t *font, int points, int
 
     const uint8_t *ptr = font->data;
     const rg_font_glyph_t *glyph = (rg_font_glyph_t *)ptr;
-    // for (size_t i = 0; i < font->chars && glyph->code && glyph->code != c; ++i)
-    while (glyph->code && glyph->code != c)
+    if (font->type == 2 && c >= (int)font->map_start_code &&
+        (uint32_t)c - font->map_start_code < font->map_len)
     {
-        if (glyph->width != 0)
-            ptr += (((glyph->width * glyph->height) - 1) / 8) + 1;
-        ptr += sizeof(rg_font_glyph_t);
-        glyph = (rg_font_glyph_t *)ptr;
+        uint32_t map_index = (uint32_t)c - font->map_start_code;
+        if (map_index < font->map_len)
+            glyph = (rg_font_glyph_t *)(ptr + font->map[map_index]);
+    }
+    else
+    {
+        // The small primary fonts and ASCII codepoints use the original scan.
+        while (glyph->code && glyph->code != c)
+        {
+            if (glyph->width != 0)
+                ptr += (((glyph->width * glyph->height) - 1) / 8) + 1;
+            ptr += sizeof(rg_font_glyph_t);
+            glyph = (rg_font_glyph_t *)ptr;
+        }
     }
 
     if (glyph && glyph->code == c) // Glyph found
@@ -329,7 +343,13 @@ static size_t get_glyph(uint32_t *output, const rg_font_t *font, int points, int
         const uint8_t *data = glyph->data;
         if (output)
         {
-            memset(output, 0, points * 4);
+            // A CJK fallback glyph is 16px high while the active Basic font
+            // is 8px high. Render at the source height first, then scale;
+            // writing directly into the smaller output buffer corrupts the
+            // stack during the downscale pass.
+            uint32_t scaled_output[32];
+            uint32_t *bitmap = (points == font->height) ? output : scaled_output;
+            memset(bitmap, 0, font->height * sizeof(*bitmap));
             int ch = 0, mask = 0x80;
             for (int y = 0; y < height; y++)
             {
@@ -345,23 +365,29 @@ static size_t get_glyph(uint32_t *output, const rg_font_t *font, int points, int
                         row |= (1 << (xOffset + x));
                     mask >>= 1;
                 }
-                output[yOffset + y] = row;
+                bitmap[yOffset + y] = row;
             }
             // Vertical stretching
             if (points != font->height)
             {
                 float scale = (float)points / font->height;
                 for (int y = points - 1; y >= 0; y--)
-                    output[y] = output[(int)(y / scale)];
+                    output[y] = bitmap[(int)(y / scale)];
             }
         }
         return RG_MAX(width, xDelta);
     }
-    // else if (font != &font_basic8x8) // Glyph not found, try fallback font
-    // {
-    //     return get_glyph(output, &font_basic8x8, points, c);
-    // }
-    else // Glyph not found, no fallback
+    else if (c > 0xFF) // Glyph not found in primary font, try CJK fallback
+    {
+        extern const rg_font_t font_ZenHei16;
+        if (font != &font_ZenHei16)
+            return get_glyph(output, &font_ZenHei16, points, c);
+    }
+    else if (font == &font_ZenHei16) // ASCII fallback for the Chinese font
+    {
+        return get_glyph(output, &font_basic8x8, points, c);
+    }
+    // Glyph not found in either font: draw the replacement box.
     {
         size_t box_width = font->width ?: 8;
         if (output) // draw missing box
@@ -396,7 +422,7 @@ rg_rect_t rg_gui_draw_text(int x_pos, int y_pos, int width, const char *text, //
         for (const char *ptr = text; *ptr;)
         {
             int chr = rg_utf8_decode(&ptr);
-            line_width += monospace ?: get_glyph(NULL, font, font_height, chr);
+            line_width += (monospace && chr <= 0xFF) ? monospace : get_glyph(NULL, font, font_height, chr);
 
             if (chr == '\n' || *ptr == 0)
             {
@@ -435,7 +461,7 @@ rg_rect_t rg_gui_draw_text(int x_pos, int y_pos, int width, const char *text, //
             while (x_offset < draw_width && *line && *line != '\n')
             {
                 int chr = rg_utf8_decode(&line);
-                int width = monospace ?: get_glyph(NULL, font, font_height, chr);
+                int width = (monospace && chr <= 0xFF) ? monospace : get_glyph(NULL, font, font_height, chr);
                 if (draw_width - x_offset < width) // Do not truncate glyphs
                     break;
                 x_offset += width;
@@ -455,8 +481,9 @@ rg_rect_t rg_gui_draw_text(int x_pos, int y_pos, int width, const char *text, //
         {
             uint32_t bitmap[font_height];
             const char *prev_ptr = ptr;
-            int glyph_width = get_glyph(bitmap, font, font_height, rg_utf8_decode(&ptr));
-            int width = monospace ?: glyph_width;
+            int chr = rg_utf8_decode(&ptr);
+            int glyph_width = get_glyph(bitmap, font, font_height, chr);
+            int width = (monospace && chr <= 0xFF) ? monospace : glyph_width;
 
             if (draw_width - x_offset < width) // Do not truncate glyphs
             {
