@@ -1,5 +1,5 @@
 # Table of contents
-- [中文说明（小妙移植版）](#中文说明小妙移植版)
+- [中文说明（小猫移植版）](#中文说明小猫移植版)
 - [Description](#description)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -8,9 +8,9 @@
 - [Acknowledgements](#acknowledgements)
 - [License](#license)
 
-# 中文说明（小妙移植版）
+# 中文说明（小猫移植版）
 
-本仓库是在 Retro-Go 基础上为**学而思小妙（XIAOMIAO）ESP32 掌机**制作的移植版本。当前分支已经针对
+本仓库是在 Retro-Go 基础上为**学而思小猫（XIAOMIAO）ESP32 掌机**制作的移植版本。当前分支已经针对
 2.4 英寸 ST7789 屏幕、中文菜单和板载蜂鸣器完成配置，英文原版说明仍保留在本文档后半部分。
 
 ## 当前固件默认配置
