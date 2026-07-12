@@ -771,6 +771,12 @@ static const char *translations[][RG_LANG_MAX] =
 
     // game menu
     {
+        [RG_LANG_EN] = "Game Menu",
+        [RG_LANG_FR] = "Menu du jeu",
+        [RG_LANG_DE] = "Spielmenü",
+        [RG_LANG_CN] = "游戏菜单",
+    },
+    {
         [RG_LANG_EN] = "Save & Continue",
         [RG_LANG_FR] = "Sauver et continuer",
         [RG_LANG_DE] = "Speichern und weiter",

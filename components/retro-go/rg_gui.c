@@ -43,6 +43,8 @@ static struct
 #define SETTING_WIFI_ENABLE "Enable"
 #define SETTING_WIFI_SLOT   "Slot"
 #define SETTING_LANGUAGE    "Language"
+#define SETTING_LANGUAGE_VERSION "LanguageVersion"
+#define SETTING_FONTTYPE_VERSION "FontVersion"
 
 static uint16_t *get_draw_buffer(int width, int height, rg_color_t fill_color)
 {
@@ -114,9 +116,32 @@ void rg_gui_init(void)
 {
     gui_update_geometry();
     gui.show_clock = rg_settings_get_boolean(NS_GLOBAL, SETTING_CLOCK, false);
-    if (!rg_gui_set_language_id(rg_settings_get_number(NS_GLOBAL, SETTING_LANGUAGE, RG_LANG_DEFAULT)))
+    int language_id = rg_settings_get_number(NS_GLOBAL, SETTING_LANGUAGE, RG_LANG_DEFAULT);
+#ifdef RG_LANG_CONFIG_VERSION
+    // A target can bump this version when its shipped default language changes.
+    // This migrates an old persisted English setting once, while still allowing
+    // the user to change language normally afterwards.
+    if (rg_settings_get_number(NS_GLOBAL, SETTING_LANGUAGE_VERSION, 0) != RG_LANG_CONFIG_VERSION)
+    {
+        language_id = RG_LANG_DEFAULT;
+        rg_settings_set_number(NS_GLOBAL, SETTING_LANGUAGE_VERSION, RG_LANG_CONFIG_VERSION);
+        rg_settings_set_number(NS_GLOBAL, SETTING_LANGUAGE, language_id);
+    }
+#endif
+    if (!rg_gui_set_language_id(language_id))
         rg_gui_set_language_id(0);
-    if (!rg_gui_set_font(rg_settings_get_number(NS_GLOBAL, SETTING_FONTTYPE, RG_FONT_DEFAULT)))
+    int font_id = rg_settings_get_number(NS_GLOBAL, SETTING_FONTTYPE, RG_FONT_DEFAULT);
+#ifdef RG_FONT_CONFIG_VERSION
+    // Migrate an old persisted Basic font once so the target starts with the
+    // CJK-capable font shipped in its image.
+    if (rg_settings_get_number(NS_GLOBAL, SETTING_FONTTYPE_VERSION, 0) != RG_FONT_CONFIG_VERSION)
+    {
+        font_id = RG_FONT_DEFAULT;
+        rg_settings_set_number(NS_GLOBAL, SETTING_FONTTYPE_VERSION, RG_FONT_CONFIG_VERSION);
+        rg_settings_set_number(NS_GLOBAL, SETTING_FONTTYPE, font_id);
+    }
+#endif
+    if (!rg_gui_set_font(font_id))
         rg_gui_set_font(0);
     rg_gui_set_theme(rg_settings_get_string(NS_GLOBAL, SETTING_THEME, NULL));
     gui.initialized = true;
@@ -2320,7 +2345,7 @@ void rg_gui_game_menu(void)
 
     rg_audio_set_mute(true);
 
-    sel = rg_gui_dialog("Retro-Go", choices, 0);
+    sel = rg_gui_dialog(_("Game Menu"), choices, 0);
 
     if (sel == 3000)
     {

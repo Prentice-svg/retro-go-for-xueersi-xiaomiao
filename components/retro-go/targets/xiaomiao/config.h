@@ -2,6 +2,11 @@
 #define RG_DEFAULT_TIMEZONE        "UTC+8"
 #define RG_FONT_DEFAULT            RG_FONT_FUSIONPIXEL_12
 #define RG_LANG_DEFAULT            RG_LANG_CN
+// Bump this when changing the target's initial language so an existing
+// English global.json is migrated to Simplified Chinese once.
+#define RG_LANG_CONFIG_VERSION     1
+// Likewise migrate an old Basic 8 setting to the CJK-capable Fusion Pixel font.
+#define RG_FONT_CONFIG_VERSION     1
 
 #define RG_STORAGE_ROOT            "/sd"
 #define RG_STORAGE_SDSPI_HOST      SPI2_HOST
