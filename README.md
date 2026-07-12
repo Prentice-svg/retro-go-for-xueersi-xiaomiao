@@ -1,4 +1,5 @@
 # Table of contents
+- [中文说明（小妙移植版）](#中文说明小妙移植版)
 - [Description](#description)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -6,6 +7,92 @@
 - [Development](#development)
 - [Acknowledgements](#acknowledgements)
 - [License](#license)
+
+# 中文说明（小妙移植版）
+
+本仓库是在 Retro-Go 基础上为**学而思小妙（XIAOMIAO）ESP32 掌机**制作的移植版本。当前分支已经针对
+2.4 英寸 ST7789 屏幕、中文菜单和板载蜂鸣器完成配置，英文原版说明仍保留在本文档后半部分。
+
+## 当前固件默认配置
+
+- **屏幕**：2.4 英寸 ST7789，面板原始分辨率 240×320，固件以横屏 320×240 使用。
+- **画面方向**：已修正上下颠倒和左右镜像；如果更换屏幕排线或面板方向，需要重新调整
+  `components/retro-go/targets/xiaomiao/config.h` 中的 `RG_SCREEN_ROTATION` 和 `RG_SCREEN_RGB_BGR`。
+- **界面语言**：默认简体中文（`RG_LANG_DEFAULT RG_LANG_CN`）。没有翻译的新增字符串会回退到英文。
+- **字体**：默认 Fusion Pixel 12（`RG_FONT_FUSIONPIXEL_12`），同时保留 ZenHei16 作为中文字体回退。
+- **蜂鸣器**：无源蜂鸣器连接 ESP32 **GPIO14**，通过 PWM 频率产生不同音调。
+
+## 10P 屏幕接线
+
+下面是本移植版本使用的 14P 转 10P 接线。`NC` 表示悬空不接，LED 电源请确认屏幕模块的标注后再通电。
+
+| 原 14P | 信号 | 新 10P | 说明 |
+|---|---|---|---|
+| 14P-2/5/13 | GND | 10P-1/10 | 地 |
+| 14P-3 | LEDK | 10P-8 LED- | 背光负极 |
+| 14P-4 | LEDA | 10P-9 LED+ | 背光正极 |
+| 14P-6 | RESET | 10P-3 RST | 复位 |
+| 14P-7 | DC | 10P-7 DC | 数据/命令 |
+| 14P-8 | SDA | 10P-4 MOSI | SPI 数据 |
+| 14P-9 | SCL | 10P-5 CLK | SPI 时钟 |
+| 14P-10/11 | VCC/IOVCC | 10P-2 3.3V | 3.3 V 电源 |
+| 14P-12 | CS | 10P-6 CS | SPI 片选 |
+| 14P-1/14 | NC | 不接 | 悬空 |
+
+对应的 ESP32 GPIO 为：`MOSI=23`、`CLK=18`、`CS=5`、`DC=4`。屏幕复位由驱动执行软件复位，
+没有额外的 ESP32 GPIO；SD 卡片选为 `GPIO22`，不要与屏幕 CS 混接。
+
+## 中文菜单、字体和翻译文件
+
+中文支持由下面几部分组成：
+
+1. `components/retro-go/translations.h`：菜单、提示和错误消息的简体中文翻译。
+2. `components/retro-go/rg_localization.h`：注册 `RG_LANG_CN` 语言枚举。
+3. `components/retro-go/fonts/FusionPixel12.c`：包含中文字符映射的主字体。
+4. `components/retro-go/fonts/ZenHei16.c`：中文回退字体；英文字符缺失时会回退到基础 8×8 字体。
+5. `components/retro-go/targets/xiaomiao/sdkconfig`：启用 `CONFIG_FATFS_API_ENCODING_UTF_8=y`，保证 SD 卡路径使用 UTF-8。
+
+以上中文翻译和字体文件已经随本仓库提交，不需要另外下载语言包。由于中文字体占用的 Flash 空间较大，
+XIAOMIAO 的 4 MB Flash 镜像已经接近容量上限，新增字体或资源前请先检查分区空间。
+
+添加新的菜单文本时，请在 C 代码中使用 `_()` 包裹字符串，并同步在 `translations.h` 中补充
+`RG_LANG_CN` 条目。修改字体后应重新生成对应的 C 字体文件，并确认字符映射和字形高度一致，
+否则屏幕上可能出现点阵、缺字或整行被截断。
+
+## 编译和刷写（Windows）
+
+先在 ESP-IDF 环境中打开 PowerShell，然后在仓库根目录执行：
+
+```powershell
+# 构建完整的 XIAOMIAO 镜像
+python rg_tool.py --target xiaomiao build-img
+
+# 直接通过串口构建并刷写（把 COM8 改成实际端口）
+python rg_tool.py --target xiaomiao --port COM8 install
+```
+
+也可以使用生成的 `retro-go_*_xiaomiao.img`，通过网页 esptool 或命令行写入地址 `0x0`：
+
+```powershell
+esptool.py --chip esp32 --port COM8 write_flash --flash_size detect 0x0 retro-go_<version>_xiaomiao.img
+```
+
+首次刷写后，请在 SD 卡根目录创建 `roms` 文件夹，并按模拟器名称放入 ROM，例如：
+
+```text
+/roms/nes/      *.nes、*.zip
+/roms/gb/       *.gb、*.gbc、*.zip
+/roms/snes/     *.smc、*.sfc、*.zip
+```
+
+旧版目录 `/sd/nes`、`/sd/gb` 等也会在标准目录为空时尝试扫描，但建议统一使用 `/sd/roms/<模拟器>`。
+
+## 常见问题
+
+- **中文变成很多点**：确认刷入的是包含 `FusionPixel12.c` 的完整镜像，并且 SD 卡文件名使用 UTF-8；不要只刷旧的英文镜像。
+- **中文只显示半行**：检查屏幕是否为 320×240 横屏配置，并确认使用最新字体映射；不要把 CJK 字符按 8 像素 ASCII 宽度强制裁剪。
+- **画面上下或左右反了**：检查 `RG_SCREEN_ROTATION=1`、`RG_SCREEN_RGB_BGR=1`，并确认 10P 排线没有反插。
+- **蜂鸣器没有声音**：确认蜂鸣器接在 GPIO14，且没有被其他外设占用；该配置使用无源蜂鸣器 PWM，频率变化才会产生不同音调。
 
 # Description
 Retro-Go is a firmware to play retro games on ESP32-based devices (officially supported are
