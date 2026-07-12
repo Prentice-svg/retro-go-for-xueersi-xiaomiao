@@ -13,6 +13,9 @@
 本仓库是在 Retro-Go 基础上为**学而思小猫（XIAOMIAO）ESP32 掌机**制作的移植版本。当前分支已经针对
 2.4 英寸 ST7789 屏幕、中文菜单和板载蜂鸣器完成配置，英文原版说明仍保留在本文档后半部分。
 
+更详细的 GPIO、SPI/DMA、ST7789 初始化、SD 卡、按键和蜂鸣器驱动说明见
+[XIAOMIAO_HARDWARE_REFERENCE.md](XIAOMIAO_HARDWARE_REFERENCE.md)。
+
 ## 当前固件默认配置
 
 - **屏幕**：2.4 英寸 ST7789，面板原始分辨率 240×320，固件以横屏 320×240 使用。
