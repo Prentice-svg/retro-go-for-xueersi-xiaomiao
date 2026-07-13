@@ -33,6 +33,17 @@ static inline void spi_give_buffer(uint16_t *buffer)
     xQueueSend(spi_buffers, &buffer, portMAX_DELAY);
 }
 
+// The display path queues SPI transactions asynchronously.  The controller's
+// reset and sleep-out commands are timing-sensitive, though, so initialization
+// must not only queue them but also wait until the panel has actually received
+// them.  Waiting for every transaction descriptor to return is also important
+// before a caller starts another windowed update from a different task.
+static inline void spi_flush(void)
+{
+    while (uxQueueMessagesWaiting(spi_transactions) < SPI_TRANSACTION_COUNT)
+        rg_task_delay(1);
+}
+
 static inline void spi_queue_transaction(const void *data, size_t length, uint32_t type)
 {
     if (!data || !length)
@@ -189,7 +200,7 @@ static inline void lcd_send_buffer(uint16_t *buffer, size_t length)
 
 static void lcd_sync(void)
 {
-    // Unused for SPI LCD
+    spi_flush();
 }
 
 static void lcd_init(void)
@@ -229,8 +240,10 @@ static void lcd_init(void)
     rg_usleep(10 * 1000);
 #endif
 
-    ILI9341_CMD(0x01);       // Reset
-    rg_usleep(5 * 1000);     // Wait 5ms after reset
+    ILI9341_CMD(0x01);       // Software reset
+    spi_flush();
+    // ST7789 requires at least 120ms after SWRESET before the next command.
+    rg_task_delay(120);
     ILI9341_CMD(0x3A, 0X55); // COLMOD (Pixel Format Set RGB565 65k)
 #if defined(RG_SCREEN_ROTATION) && defined(RG_SCREEN_RGB_BGR)
     // The rotation is designed so that the user can simply try all values 0-7 to find what works.
@@ -243,8 +256,11 @@ static void lcd_init(void)
     #warning "LCD init sequence is not defined for this device!"
 #endif
     ILI9341_CMD(0x11);    // Exit Sleep
-    rg_usleep(10 * 1000); // Wait 10ms after sleep out
+    spi_flush();
+    // ST7789 also specifies a 120ms settling time after SLPOUT.
+    rg_task_delay(120);
     ILI9341_CMD(0x29);    // Display on
+    spi_flush();
 }
 
 static void lcd_deinit(void)

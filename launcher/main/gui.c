@@ -145,7 +145,12 @@ rg_image_t *gui_get_image(const char *type, const char *subtype)
     for (const binfile_t **img = builtin_images; *img; img++)
     {
         if (strcmp((*img)->name, name) == 0)
-            return rg_surface_load_image((*img)->data, (*img)->size, 0);
+        {
+            rg_image_t *decoded = rg_surface_load_image((*img)->data, (*img)->size, 0);
+            if (!decoded)
+                RG_LOGE("Built-in image decode failed: %s (%u bytes)", name, (unsigned)(*img)->size);
+            return decoded;
+        }
     }
 
     return NULL;

@@ -310,6 +310,8 @@ rg_surface_t *rg_surface_load_image_file(const char *filename, uint32_t flags)
     if (rg_storage_read_file(filename, &data, &data_len, 0))
     {
         rg_surface_t *img = rg_surface_load_image(data, data_len, flags);
+        if (!img)
+            RG_LOGE("Image file decode failed: %s (%u bytes)", filename, (unsigned)data_len);
         free(data);
         return img;
     }
