@@ -11,9 +11,9 @@
 # 中文说明（小猫移植版）
 
 本仓库是在 Retro-Go 基础上为**学而思小猫（XIAOMIAO）ESP32 掌机**制作的移植版本。当前分支已经针对
-2.4 英寸 ST7789 屏幕、中文菜单和板载蜂鸣器完成配置，英文原版说明仍保留在本文档后半部分。
+2.4 英寸 ST7789 屏幕、中文菜单、MAX98357A 外部音频和 GPIO14 背光已经完成配置，英文原版说明仍保留在本文档后半部分。
 
-更详细的 GPIO、SPI/DMA、ST7789 初始化、SD 卡、按键和蜂鸣器驱动说明见
+更详细的 GPIO、SPI/DMA、ST7789 初始化、SD 卡、按键、MAX98357A I2S 音频和 GPIO14 背光驱动说明见
 [XIAOMIAO_HARDWARE_REFERENCE.md](XIAOMIAO_HARDWARE_REFERENCE.md)。
 
 ## 当前固件默认配置
@@ -23,7 +23,8 @@
   `components/retro-go/targets/xiaomiao/config.h` 中的 `RG_SCREEN_ROTATION` 和 `RG_SCREEN_RGB_BGR`。
 - **界面语言**：默认简体中文（`RG_LANG_DEFAULT RG_LANG_CN`）。没有翻译的新增字符串会回退到英文。
 - **字体**：默认 Fusion Pixel 12（`RG_FONT_FUSIONPIXEL_12`），同时保留 ZenHei16 作为中文字体回退。
-- **蜂鸣器**：无源蜂鸣器连接 ESP32 **GPIO14**，通过 PWM 频率产生不同音调。
+- **音频**：MAX98357A 通过 I2S 接收音频：LRC=GPIO32、BCLK=GPIO25、DIN=GPIO33。
+- **背光**：GPIO14 通过 LEDC PWM 控制 LCD 背光；当前按 LEDK 低端驱动配置了反相输出。
 
 ## 10P 屏幕接线
 
@@ -94,8 +95,8 @@ esptool.py --chip esp32 --port COM8 write_flash --flash_size detect 0x0 retro-go
 
 - **中文变成很多点**：确认刷入的是包含 `FusionPixel12.c` 的完整镜像，并且 SD 卡文件名使用 UTF-8；不要只刷旧的英文镜像。
 - **中文只显示半行**：检查屏幕是否为 320×240 横屏配置，并确认使用最新字体映射；不要把 CJK 字符按 8 像素 ASCII 宽度强制裁剪。
-- **画面上下或左右反了**：检查 `RG_SCREEN_ROTATION=1`、`RG_SCREEN_RGB_BGR=1`，并确认 10P 排线没有反插。
-- **蜂鸣器没有声音**：确认蜂鸣器接在 GPIO14，且没有被其他外设占用；该配置使用无源蜂鸣器 PWM，频率变化才会产生不同音调。
+- **音频或背光异常**：确认 MAX98357A 的 LRC/BCLK/DIN 分别接 GPIO32/25/33，并确认 GPIO14 接到背光 LEDK；若 GPIO14 接 LEDA，请删除 `RG_GPIO_LCD_BCKL_INVERT`。
+- **扬声器没有声音**：确认 MAX98357A 的 VIN/GND 正确供电并与 ESP32 共地，LRC/BCLK/DIN 分别接 GPIO32/25/33；GPIO14 只用于背光，不再输出蜂鸣器音频。
 
 # Description
 Retro-Go is a firmware to play retro games on ESP32-based devices (officially supported are

@@ -13,10 +13,10 @@
 #define RG_STORAGE_SDSPI_SPEED     SDMMC_FREQ_DEFAULT
 
 #define RG_AUDIO_USE_INT_DAC       0
-#define RG_AUDIO_USE_EXT_DAC       0
-// This must be a preprocessor integer (not GPIO_NUM_14, which is an enum),
-// otherwise the buzzer backend is compiled out by its #if guard.
-#define RG_AUDIO_USE_BUZZER_PIN    14
+#define RG_AUDIO_USE_EXT_DAC       1
+// The original buzzer was disconnected.  Audio now goes to a MAX98357A
+// I2S amplifier, while GPIO14 is reused as the LCD backlight PWM output.
+#define RG_AUDIO_USE_BUZZER_PIN    0
 
 // 2.4-inch ST7789, 240x320 panel used in landscape (320x240) on SPI2.
 // The 10-pin adapter preserves the original Xiaomiao SPI wiring:
@@ -26,7 +26,7 @@
 #define RG_SCREEN_DRIVER           1
 #define RG_SCREEN_HOST             SPI2_HOST
 #define RG_SCREEN_SPEED            SPI_MASTER_FREQ_20M
-#define RG_SCREEN_BACKLIGHT        0
+#define RG_SCREEN_BACKLIGHT        1
 #define RG_SCREEN_WIDTH            320
 #define RG_SCREEN_HEIGHT           240
 #define RG_SCREEN_ROTATION         1
@@ -77,12 +77,20 @@
 #define RG_GPIO_LCD_CLK             GPIO_NUM_18
 #define RG_GPIO_LCD_CS              GPIO_NUM_5
 #define RG_GPIO_LCD_DC              GPIO_NUM_4
-// No backlight or ESP GPIO reset; the display driver issues a software reset.
+#define RG_GPIO_LCD_BCKL            GPIO_NUM_14
+// LEDK is low-side driven: a low GPIO level turns the backlight on.
+#define RG_GPIO_LCD_BCKL_INVERT
+// No ESP GPIO reset; the display driver issues a software reset.
 
 #define RG_GPIO_SDSPI_MISO          GPIO_NUM_19
 #define RG_GPIO_SDSPI_MOSI          GPIO_NUM_23
 #define RG_GPIO_SDSPI_CLK           GPIO_NUM_18
 #define RG_GPIO_SDSPI_CS            GPIO_NUM_22
+
+// MAX98357A I2S amplifier (DIN receives ESP32 data).
+#define RG_GPIO_SND_I2S_BCK         GPIO_NUM_25
+#define RG_GPIO_SND_I2S_WS          GPIO_NUM_32
+#define RG_GPIO_SND_I2S_DATA        GPIO_NUM_33
 
 #define RG_UPDATER_ENABLE           1
 #define RG_UPDATER_APPLICATION      RG_APP_FACTORY

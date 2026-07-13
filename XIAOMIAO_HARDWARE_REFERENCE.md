@@ -14,7 +14,7 @@
 | LCD 工作方向 | 横屏 320×240 |
 | LCD 总线 | SPI2/HSPI，SPI mode 0，20 MHz |
 | SD 卡 | SPI2 SDSPI，独立 CS |
-| 音频 | GPIO14 无源蜂鸣器，LEDC PWM + ESP32 General Purpose Timer |
+| 音频 | MAX98357A 外部 I2S 功放，I2S0 TX |
 | 按键 | 6 个 GPIO 输入，低电平有效 |
 | I2C | SDA=GPIO21、SCL=GPIO15，当前目标未启用 I2C 外设 |
 
@@ -57,7 +57,7 @@ SPI/DMA 传输框架。
 | LCD DC | 4 | 命令/数据选择 |
 | LCD MISO | 19 | 已配置，但当前只写屏，通常不读屏 |
 | LCD RESET | 无 ESP GPIO | 复位线由排线连接；驱动另外发送软件复位 |
-| LCD 背光 | 无 ESP GPIO | `RG_GPIO_LCD_BCKL` 未定义，当前不使用 LEDC 调光 |
+| LCD 背光 | GPIO14 | LEDC PWM 控制；当前与原蜂鸣器引脚复用 |
 
 屏幕 14P 到 10P 的接线为：
 
@@ -214,30 +214,49 @@ SELECT = LEFT + RIGHT
 
 当前目标只定义这三个虚拟键。虚拟键逻辑要求组合状态完全匹配 `src`，因此按住对应的实体键组合时才触发；由于 `MENU` 与 `START` 都包含 `UP + DOWN`，实现中将三键 `MENU` 项放在两键 `START` 项之前，避免被提前匹配成 `START`。
 
-## 5. GPIO14 蜂鸣器
+## 5. MAX98357A 音频与 GPIO14 背光
 
-目标配置：
+当前硬件已经移除原来的无源蜂鸣器，改用 MAX98357A I2S 功放驱动扬声器；GPIO14 不再输出音频，而是用于控制 LCD 背光。
+
+### 5.1 MAX98357A 接线
+
+| MAX98357A | ESP32 | 说明 |
+|---|---:|---|
+| LRC / WS | GPIO32 | I2S 字选择/左右声道时钟 |
+| BCLK | GPIO25 | I2S 位时钟 |
+| DIN | GPIO33 | 功放数字音频输入 |
+| GND | GND | 必须共地 |
+| VIN | 按功放模块规格供电 | 不要把 VIN 与 ESP32 GPIO 混接 |
+
+MAX98357A 不需要 MCLK。当前 `components/retro-go/drivers/audio/i2s.c` 使用 ESP32 I2S0 主机发送 16-bit、立体声、标准 Philips I2S 数据：
 
 ```c
-#define RG_AUDIO_USE_INT_DAC    0
-#define RG_AUDIO_USE_EXT_DAC    0
-#define RG_AUDIO_USE_BUZZER_PIN 14
+#define RG_AUDIO_USE_INT_DAC 0
+#define RG_AUDIO_USE_EXT_DAC 1
+#define RG_GPIO_SND_I2S_BCK  GPIO_NUM_25
+#define RG_GPIO_SND_I2S_WS   GPIO_NUM_32
+#define RG_GPIO_SND_I2S_DATA GPIO_NUM_33
 ```
 
-这不是简单的 GPIO 翻转，而是 Retro-Go 的 PCM 蜂鸣器驱动：
+音频驱动流程为：
 
-1. 游戏产生单声道 `int16_t` PCM 样本；
-2. 样本先放入约 50 ms 的 FreeRTOS 队列；
-3. LEDC low-speed mode、channel 0、timer 0 输出到 GPIO14；
-4. ESP32 General Purpose Timer group 0 / timer 0 以采样率触发中断；
-5. 中断从队列取出样本，把 `[-32768,32767]` 转成 PWM duty；
-6. 当前启动日志中的采样率为 32 kHz，PWM 载波也设置为 32 kHz；
-7. 当前芯片得到 11 bit 左右的 PWM duty 分辨率，剩余位用于削波；
-8. 静音时暂停 GPTimer、关闭中断并将 duty 设为 0。
+1. 游戏产生 `int16_t` 左/右声道 PCM 样本。
+2. `rg_audio_submit()` 将样本交给 I2S 驱动。
+3. 驱动按当前音量做软件缩放，再通过 `i2s_write(I2S_NUM_0, ...)` 写入 DMA。
+4. 默认采样率仍由应用传入，当前固件启动时为 32 kHz。
+5. 静音时清空 I2S DMA 缓冲区；当前没有配置独立的功放 EN/SD GPIO。
 
-因此，游戏中的音调来自 PCM 样本，而不是在主循环里直接调用 `gpio_set_level()`。如果另一个项目
-只需要播放单音，可以复用 GPIO14 和 LEDC，但应让 PWM 载波保持在约 16 kHz 以上，再改变定时器
-频率或生成方波；不要把 GPIO14 同时接到其他外设。
+### 5.2 GPIO14 背光
+
+```c
+#define RG_SCREEN_BACKLIGHT     1
+#define RG_GPIO_LCD_BCKL        GPIO_NUM_14
+#define RG_GPIO_LCD_BCKL_INVERT
+```
+
+`components/retro-go/drivers/display/ili9341.h` 使用 LEDC low-speed mode、channel 0、timer 0，频率 5 kHz、13-bit duty 输出到 GPIO14。当前按 LEDK 低端控制方式配置了反相输出：PWM 占空比越大，背光越亮；初始化时先关闭背光，LCD 清屏后再恢复设置中的亮度（默认 80%）。
+
+如果你的实际接线是 GPIO14 接到 LEDA（高端）而不是 LEDK（低端），需要删除 `RG_GPIO_LCD_BCKL_INVERT`，否则亮度方向会相反。
 
 ## 6. I2C 和电池接口现状
 
@@ -261,7 +280,8 @@ components/retro-go/rg_display.c              缩放、滤镜、局部刷新
 components/retro-go/rg_storage.c              SDSPI + FAT 挂载
 components/retro-go/rg_input.c                 GPIO 扫描和去抖
 components/retro-go/rg_audio.c                 音频 sink 选择
-components/retro-go/drivers/audio/buzzer.c     GPIO14 PWM 蜂鸣器
+components/retro-go/drivers/audio/i2s.c        MAX98357A I2S 音频输出
+components/retro-go/drivers/display/ili9341.h  GPIO14 LEDC 背光控制
 ```
 
 如果新项目只需要点亮屏幕，最小实现就是：初始化 SPI2、配置 DC/CS、发送上述 ST7789 初始化
