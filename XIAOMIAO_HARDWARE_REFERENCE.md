@@ -251,12 +251,9 @@ MAX98357A 不需要 MCLK。当前 `components/retro-go/drivers/audio/i2s.c` 使�
 ```c
 #define RG_SCREEN_BACKLIGHT     1
 #define RG_GPIO_LCD_BCKL        GPIO_NUM_14
-#define RG_GPIO_LCD_BCKL_INVERT
 ```
 
-`components/retro-go/drivers/display/ili9341.h` 使用 LEDC low-speed mode、channel 0、timer 0，频率 5 kHz、13-bit duty 输出到 GPIO14。当前按 LEDK 低端控制方式配置了反相输出：PWM 占空比越大，背光越亮；初始化时先关闭背光，LCD 清屏后再恢复设置中的亮度（默认 80%）。
-
-如果你的实际接线是 GPIO14 接到 LEDA（高端）而不是 LEDK（低端），需要删除 `RG_GPIO_LCD_BCKL_INVERT`，否则亮度方向会相反。
+`components/retro-go/drivers/display/ili9341.h` 使用 LEDC low-speed mode、channel 0、timer 0，频率 5 kHz、13-bit duty 输出到 GPIO14。当前接线使用正常（非反相）PWM 极性：PWM 占空比越大，背光越亮；初始化时先关闭背光，LCD 清屏后再恢复设置中的亮度（默认 80%）。
 
 ## 6. I2C 和电池接口现状
 

@@ -24,7 +24,7 @@
 - **界面语言**：默认简体中文（`RG_LANG_DEFAULT RG_LANG_CN`）。没有翻译的新增字符串会回退到英文。
 - **字体**：默认 Fusion Pixel 12（`RG_FONT_FUSIONPIXEL_12`），同时保留 ZenHei16 作为中文字体回退。
 - **音频**：MAX98357A 通过 I2S 接收音频：LRC=GPIO32、BCLK=GPIO25、DIN=GPIO33。
-- **背光**：GPIO14 通过 LEDC PWM 控制 LCD 背光；当前按 LEDK 低端驱动配置了反相输出。
+- **背光**：GPIO14 通过 LEDC PWM 控制 LCD 背光；当前使用正常（非反相）PWM 极性。
 
 ## 10P 屏幕接线
 
@@ -95,7 +95,7 @@ esptool.py --chip esp32 --port COM8 write_flash --flash_size detect 0x0 retro-go
 
 - **中文变成很多点**：确认刷入的是包含 `FusionPixel12.c` 的完整镜像，并且 SD 卡文件名使用 UTF-8；不要只刷旧的英文镜像。
 - **中文只显示半行**：检查屏幕是否为 320×240 横屏配置，并确认使用最新字体映射；不要把 CJK 字符按 8 像素 ASCII 宽度强制裁剪。
-- **音频或背光异常**：确认 MAX98357A 的 LRC/BCLK/DIN 分别接 GPIO32/25/33，并确认 GPIO14 接到背光 LEDK；若 GPIO14 接 LEDA，请删除 `RG_GPIO_LCD_BCKL_INVERT`。
+- **音频或背光异常**：确认 MAX98357A 的 LRC/BCLK/DIN 分别接 GPIO32/25/33，并确认 GPIO14 的背光接线和 PWM 极性正确。
 - **扬声器没有声音**：确认 MAX98357A 的 VIN/GND 正确供电并与 ESP32 共地，LRC/BCLK/DIN 分别接 GPIO32/25/33；GPIO14 只用于背光，不再输出蜂鸣器音频。
 
 # Description

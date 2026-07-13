@@ -78,8 +78,7 @@
 #define RG_GPIO_LCD_CS              GPIO_NUM_5
 #define RG_GPIO_LCD_DC              GPIO_NUM_4
 #define RG_GPIO_LCD_BCKL            GPIO_NUM_14
-// LEDK is low-side driven: a low GPIO level turns the backlight on.
-#define RG_GPIO_LCD_BCKL_INVERT
+// The current wiring uses the normal (non-inverted) LEDC polarity.
 // No ESP GPIO reset; the display driver issues a software reset.
 
 #define RG_GPIO_SDSPI_MISO          GPIO_NUM_19
