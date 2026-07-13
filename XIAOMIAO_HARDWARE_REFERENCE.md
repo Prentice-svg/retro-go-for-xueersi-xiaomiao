@@ -207,13 +207,12 @@ GPIO12 是 ESP32 启动绑带脚 MTDI，GPIO34/35 是只能输入的 GPIO，移�
 5. 虚拟按键使用组合键：
 
 ```text
-START  = UP   + A
-SELECT = DOWN + B
-MENU   = LEFT + A
-OPTION = RIGHT + B
+MENU   = UP + DOWN + B
+START  = UP + DOWN
+SELECT = LEFT + RIGHT
 ```
 
-当前虚拟键逻辑要求组合状态完全匹配 `src`，因此两个实体键同时按下时才触发。
+当前目标只定义这三个虚拟键。虚拟键逻辑要求组合状态完全匹配 `src`，因此按住对应的实体键组合时才触发；由于 `MENU` 与 `START` 都包含 `UP + DOWN`，实现中将三键 `MENU` 项放在两键 `START` 项之前，避免被提前匹配成 `START`。
 
 ## 5. GPIO14 蜂鸣器
 

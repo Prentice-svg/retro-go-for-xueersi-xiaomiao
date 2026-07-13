@@ -59,12 +59,13 @@
     {RG_KEY_B,      .num = GPIO_NUM_12, .pullup = 1, .level = 0},\
 }
 
-// Virtual combos for Start/Select/Menu/Option
+// Virtual combos for Start/Select/Menu.
+// Keep the three-key MENU entry before START because the matching logic
+// replaces an exact source state as soon as it finds a match.
 #define RG_GAMEPAD_VIRT_MAP {\
-    {RG_KEY_START,  .src = RG_KEY_UP    | RG_KEY_A},\
-    {RG_KEY_SELECT, .src = RG_KEY_DOWN  | RG_KEY_B},\
-    {RG_KEY_MENU,   .src = RG_KEY_LEFT  | RG_KEY_A},\
-    {RG_KEY_OPTION, .src = RG_KEY_RIGHT | RG_KEY_B},\
+    {RG_KEY_MENU,   .src = RG_KEY_UP    | RG_KEY_DOWN | RG_KEY_B},\
+    {RG_KEY_START,  .src = RG_KEY_UP    | RG_KEY_DOWN},\
+    {RG_KEY_SELECT, .src = RG_KEY_LEFT  | RG_KEY_RIGHT},\
 }
 
 // GPIO pin assignments
