@@ -1,5 +1,7 @@
 # Table of contents
 - [中文说明（小猫移植版）](#中文说明小猫移植版)
+- [中文文档导航](#中文文档导航)
+- [小猫移植到其他 ESP32 项目](#小猫移植到其他-esp32-项目)
 - [Description](#description)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -15,6 +17,25 @@
 
 更详细的 GPIO、SPI/DMA、ST7789 初始化、SD 卡、按键、MAX98357A I2S 音频和 GPIO14 背光驱动说明见
 [XIAOMIAO_HARDWARE_REFERENCE.md](XIAOMIAO_HARDWARE_REFERENCE.md)。
+
+## 中文文档导航
+
+| 文档 | 内容 |
+|---|---|
+| [XIAOMIAO_HARDWARE_REFERENCE.md](XIAOMIAO_HARDWARE_REFERENCE.md) | 当前小猫的 GPIO、ST7789、SPI/DMA、SD、按键、I2S 和背光驱动参考 |
+| [XIAOMIAO_PORTING.md](XIAOMIAO_PORTING.md) | 将小猫适配移植到其他 ESP32 项目或复制为新 target 的中文步骤 |
+| [BUILDING.md](BUILDING.md) | Retro-Go 通用构建、单独刷写和串口调试说明 |
+| [PORTING.md](PORTING.md) | Retro-Go 通用 target 移植说明 |
+| [LOCALIZATION.md](LOCALIZATION.md) | 新增中文菜单、翻译条目和字体的流程 |
+| [THEMING.md](THEMING.md) | 默认主题图片、PNG 和 `tools/gen_images.py` 说明 |
+
+## 小猫移植到其他 ESP32 项目
+
+如果只是复用当前硬件驱动，重点参考 [XIAOMIAO_PORTING.md](XIAOMIAO_PORTING.md) 第 5 节：
+先初始化 SPI2 和 ST7789，再使用 `0x2A → 0x2B → 0x2C` 写入 RGB565；音频使用 GPIO25/32/33 的 I2S，GPIO14 使用 LEDC 控制背光。
+
+如果要在 Retro-Go 中新增一块板，请复制 `components/retro-go/targets/xiaomiao/`，修改 `config.h`、`env.py` 和 `sdkconfig`，
+然后使用 `python rg_tool.py --target <target> build-img` 构建镜像。不要直接修改 `xiaomiao`，这样可以保留当前已验证的硬件配置作为参考。
 
 ## 当前固件默认配置
 

@@ -1,7 +1,22 @@
 # Table of contents
+- [小猫中文构建与刷写](#小猫中文构建与刷写)
 - [Building Retro-Go](#prerequisites)
 - [Porting Retro-Go](#porting-retro-go)
 - [IDE Support](#ide-support)
+
+## 小猫中文构建与刷写
+
+本仓库的 XIAOMIAO 目标使用 ESP32、4 MB Flash 和 PSRAM，默认只构建 `launcher` 与 `retro-core`。
+在 Windows PowerShell 中，进入 ESP-IDF 环境后执行：
+
+```powershell
+python rg_tool.py --target xiaomiao build-img
+python rg_tool.py --target xiaomiao --port COM8 install
+```
+
+屏幕、中文字体、MAX98357A 和 GPIO14 背光的移植说明见
+[XIAOMIAO_PORTING.md](XIAOMIAO_PORTING.md)。如果只是调试菜单，可先单独刷写 launcher，
+但首次使用新分区或新硬件时仍应刷写完整 `.img` 镜像。
 
 
 # Building Retro-Go

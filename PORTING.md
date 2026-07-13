@@ -1,8 +1,14 @@
 # Table of contents
+- [小猫中文移植说明](#小猫中文移植说明)
 - [Prerequisites](#prerequisites)
 - [Targets](#targets)
 - [Porting](#porting)
 - [Patching](#patching)
+
+## 小猫中文移植说明
+
+本仓库针对学而思小猫的中文移植步骤、当前 GPIO 基线、ST7789 刷新同步、MAX98357A 音频、GPIO14 背光和中文字体说明，
+请直接阅读 [XIAOMIAO_PORTING.md](XIAOMIAO_PORTING.md)。本文后面的英文内容仍然保留，用于 Retro-Go 的通用 target 移植参考。
 
 
 # Introduction
