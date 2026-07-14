@@ -1,4 +1,4 @@
-# Table of contents
+﻿# Table of contents
 - [中文说明（小猫移植版）](#中文说明小猫移植版)
 - [中文文档导航](#中文文档导航)
 - [小猫移植到其他 ESP32 项目](#小猫移植到其他-esp32-项目)
@@ -96,10 +96,43 @@ python rg_tool.py --target xiaomiao build-img
 python rg_tool.py --target xiaomiao --port COM8 install
 ```
 
+### Windows 环境变量与一键刷写（小猫）
+
+`rg_tool.py` 不是独立工具，必须在 ESP-IDF 环境中运行。直接执行 `python rg_tool.py` 如果看到 `IDF_PATH is not defined`，说明当前 PowerShell 没有加载 ESP-IDF。推荐使用仓库里的 `tools/flash_xiaomiao.ps1`，它会自动设置本机 ESP-IDF 5.3、Python、CMake、Ninja 和 Xtensa 工具链路径。
+
+```powershell
+# 自动配置环境、构建完整镜像并刷写 COM8
+powershell -ExecutionPolicy Bypass -File .\tools\flash_xiaomiao.ps1 -Port COM8
+
+# 首次替换固件：先备份完整 4MB Flash，再构建和刷写
+powershell -ExecutionPolicy Bypass -File .\tools\flash_xiaomiao.ps1 -Port COM8 -BackupFirst
+
+# 只刷 launcher，调试菜单和字体时更快
+powershell -ExecutionPolicy Bypass -File .\tools\flash_xiaomiao.ps1 -Port COM8 -LauncherOnly
+```
+
+也可以双击项目根目录的 `一键刷机.cmd`。如果串口不是 COM8，请指定 `-Port COMx`。
+
+如果需要手动执行，先设置 ESP-IDF 路径：
+
+```powershell
+$env:IDF_PATH = "$env:USERPROFILE\.platformio\packages\framework-espidf@3.50301.0"
+$idfPython = "$env:USERPROFILE\.espressif\python_env\idf5.3_py3.12_env\Scripts\python.exe"
+& $idfPython rg_tool.py --target xiaomiao --port COM8 install
+```
+
+命令行刷写 `.img` 时不要使用 `esptool.py` 或 `python esptool.py`；仓库中没有这个脚本文件。应使用 ESP-IDF Python 环境中的模块：
+
+```powershell
+& $idfPython -m esptool --chip esp32 --port COM8 --baud 921600 `
+  write_flash --flash_size detect 0x0 retro-go_1.0-8-g2088e7b-dirty_xiaomiao.img
+```
+
+
 也可以使用生成的 `retro-go_*_xiaomiao.img`，通过网页 esptool 或命令行写入地址 `0x0`：
 
 ```powershell
-esptool.py --chip esp32 --port COM8 write_flash --flash_size detect 0x0 retro-go_<version>_xiaomiao.img
+python -m esptool --chip esp32 --port COM8 write_flash --flash_size detect 0x0 retro-go_<version>_xiaomiao.img
 ```
 
 首次刷写后，请在 SD 卡根目录创建 `roms` 文件夹，并按模拟器名称放入 ROM，例如：
@@ -168,7 +201,7 @@ optimized to reduce their cpu, memory, and flash needs without reducing compatib
   1. Download the .img for your device from the [release page](https://github.com/ducalex/retro-go/releases/).
   2. Connect your device to a computer with a USB cable.
   3. Flash the image with esptool:
-     - [Command line](https://github.com/espressif/esptool/releases/): Run `esptool.py write_flash --flash_size detect 0x0 retro-go_*.img`
+     - [Command line](https://github.com/espressif/esptool/releases/): Run `python -m esptool write_flash --flash_size detect 0x0 retro-go_*.img`
      - [Web version](https://espressif.github.io/esptool-js/): Connect your device, click Erase Flash, then select your .img file and set address to 0x0, finally click Program)
 
 Your particular device may require extra steps (like holding a button during power up) or different esptool flags or a special cable. If the above steps fail, you might need to ask the manufacturer for instructions on how to flash new firmware!
